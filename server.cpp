@@ -4,6 +4,9 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <dirent.h>
+#include <sys/stat.h>
+#include <ctime>
+#include <sstream>
 
 class TCPServer {
 public:
@@ -80,11 +83,42 @@ private:
             } else if (command.find("PUT") == 0){
                 std::string filename = command.substr(4);
                 receiveFile(clientSocket, filename);
+            } else if (command.find("DELETE") == 0){
+                std::string filename = command.substr(7);
+                deleteFile(clientSocket, filename);
+            } else if (command.find("INFO") == 0){
+                std::string filename = command.substr(5);
+                retrieveFileInfo(clientSocket, filename);
             }
             else {
                 const char* response = "Unknown command";
                 send(clientSocket, response, strlen(response), 0);
             }
+        }
+    }
+
+    void retrieveFileInfo(int clientSocket, const std::string& filename) {
+        struct stat fileStat;
+        if (stat(filename.c_str(), &fileStat) == 0) {
+            std::ostringstream info;
+            info << "File Information:\n";
+            info << "Size: " << fileStat.st_size << " bytes\n";
+            info << "Last modified: " << ctime(&fileStat.st_mtime);
+
+            send(clientSocket, info.str().c_str(), info.str().size(), 0);
+        } else {
+            const char* response = "File not found.";
+            send(clientSocket, response, strlen(response), 0);
+        }
+    }
+
+    void deleteFile(int clientSocket, const std::string& filename){
+        if (remove(filename.c_str()) == 0){
+            const char* response = "File deleted successfully";
+            send(clientSocket, response, strlen(response), 0);
+        }else{
+            const char* response = "Error deleting file";
+            send(clientSocket, response, strlen(response), 0);
         }
     }
 
