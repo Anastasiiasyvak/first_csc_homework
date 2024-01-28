@@ -43,7 +43,7 @@ public:
 
 
     void command() const{
-        std::cout << "1) GET <filename>\n";
+        std::cout << "1)GET <filename>\n2)LIST\n3)PUT <filename>\n4)DELETE <filename>\n5)INFO <filename>\n";
 
         while(true) {
             std::string command;
@@ -56,7 +56,7 @@ public:
             }
 
             send(clientSocket, command.c_str(), command.size(), 0);
-            if (command.find("GET ") == 0){
+            if (command.find("GET ") == 0 || command.find("LIST") == 0 || command.find("PUT") == 0 || command.find("DELETE") == 0 || command.find("INFO") == 0){
                 receiveServerMessage();
             }else{
                 std::cout << "unknown command" << std::endl;

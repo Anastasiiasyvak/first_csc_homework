@@ -1,0 +1,8 @@
+In the computer networking, client-server architecture plays a key role in facilitating
+communication between devices. The essence of this architecture lies in the clear separation of
+two entities: the client, which initiates requests, and the server, which processes these requests
+and delivers responses. In this assignment, we are diving into the fundamentals of client-server
+programming using the Transmission Control Protocol (TCP), a reliable and connection-oriented
+protocol. By implementing a project using distinct client and server components, students will
+gain a hands-on understanding of how these entities collaborate to enable communication over
+a network
