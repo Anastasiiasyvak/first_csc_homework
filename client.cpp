@@ -17,6 +17,7 @@ public:
         inet_pton(AF_INET, serverIp, &(serverAddr.sin_addr));
     }
 
+
     ~TCPClient() {
         close(clientSocket);
     }
@@ -25,16 +26,43 @@ public:
         return connect(clientSocket, reinterpret_cast<struct sockaddr*>(&serverAddr), sizeof(serverAddr)) != -1;
     }
 
-    void sendMessage(const char* message) {
-        send(clientSocket, message, strlen(message), 0);
+    void receiveServerMessage() const{
+        char fileMessage[1024];
+        memset(fileMessage, 0, sizeof(fileMessage));
+        ssize_t bytes = recv(clientSocket, fileMessage, sizeof(fileMessage), 0);
+        if (bytes > 0) {
+            std::cout << fileMessage << std::endl;
+        }
+        else{
+            std::cerr << "Failed to receive message from server" << std::endl;
+        }
+
     }
 
-    void receiveMessage() {
-        char buffer[1024];
-        ssize_t bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
-        if (bytesReceived > 0) {
-            std::cout << "Received from server: " << buffer << std::endl;
+
+
+
+    void command() const{
+        std::cout << "1) GET <filename>\n";
+
+        while(true) {
+            std::string command;
+
+            std::cout << "Enter a command: ";
+            getline(std::cin, command);
+
+            if (command == "STOP") {
+                break;
+            }
+
+            send(clientSocket, command.c_str(), command.size(), 0);
+            if (command.find("GET ") == 0){
+                receiveServerMessage();
+            }else{
+                std::cout << "unknown command" << std::endl;
+            }
         }
+
     }
 
 private:
@@ -44,7 +72,7 @@ private:
 
 int main() {
     const char* serverIp = "127.0.0.1";
-    int port = 12345;
+    int port = 12346;
 
     TCPClient client(serverIp, port);
 
@@ -53,10 +81,7 @@ int main() {
         return 1;
     }
 
-    const char* message = "Hello, server! How are you?";
-    client.sendMessage(message);
-
-    client.receiveMessage();
+    client.command();
 
     return 0;
 }

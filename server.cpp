@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <cstring>
 #include <unistd.h>
 #include <arpa/inet.h>
@@ -13,7 +14,7 @@ public:
         }
 
         serverAddr.sin_family = AF_INET;
-        serverAddr.sin_addr.s_addr = INADDR_ANY; // сервер приймає з'єднання на будь-якому доступному IP-адресі цього пристрою
+        serverAddr.sin_addr.s_addr = INADDR_ANY;
         serverAddr.sin_port = htons(port);
 
         if (bind(serverSocket, reinterpret_cast<struct sockaddr*>(&serverAddr), sizeof(serverAddr)) == -1) {
@@ -38,38 +39,64 @@ public:
     void startListening() {
         sockaddr_in clientAddr{};
         socklen_t clientAddrLen = sizeof(clientAddr);
-        int clientSocket = accept(serverSocket, reinterpret_cast<struct sockaddr*>(&clientAddr), &clientAddrLen);
-        if (clientSocket == -1) {
-            perror("Accept failed");
-            close(serverSocket);
-            exit(1);
+
+        while (true) {
+            int clientSocket = accept(serverSocket, reinterpret_cast<struct sockaddr*>(&clientAddr), &clientAddrLen);
+            if (clientSocket == -1) {
+                perror("Accept failed");
+                close(serverSocket);
+                exit(1);
+            }
+
+            std::cout << "Accepted connection from " << inet_ntoa(clientAddr.sin_addr) << ":" << ntohs(clientAddr.sin_port) <<
+                      std::endl;
+
+            handleClientRequest(clientSocket);
+
+            close(clientSocket);
         }
-
-        std::cout << "Accepted connection from " << inet_ntoa(clientAddr.sin_addr) << ":" << ntohs(clientAddr.sin_port) <<
-                  std::endl;
-
-        char buffer[1024];
-        memset(buffer, 0, 1024);
-        ssize_t bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
-        if (bytesReceived > 0) {
-            std::cout << "Received data: " << buffer << std::endl;
-
-            const char* response = "Hello, client! This is the server.";
-            send(clientSocket, response, strlen(response), 0);
-        }
-
-        close(clientSocket);
     }
 
 private:
     int serverSocket;
     sockaddr_in serverAddr;
+    sockaddr_in clientAddr;
+    socklen_t clientAddrLen = sizeof(clientAddr);
+
+    void handleClientRequest(int clientSocket) {
+        char buffer[1024];
+        memset(buffer, 0, 1024);
+        ssize_t bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
+        if (bytesReceived > 0) {
+            std::cout << "Received command: " << buffer << std::endl;
+
+            std::string command(buffer);
+            if (command.find("GET ") == 0) {
+                std::string filename = command.substr(4);
+                sendFileContent(clientSocket, filename);
+            } else {
+                const char* response = "Unknown command";
+                send(clientSocket, response, strlen(response), 0);
+            }
+        }
+    }
+
+    void sendFileContent(int clientSocket, const std::string& filename) {
+        std::ifstream file(filename);
+
+        if (file) {
+            std::string fileContent((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+            send(clientSocket, fileContent.c_str(), fileContent.size(), 0);
+        }
+        else {
+            const char* response = "File not found.";
+            send(clientSocket, response, strlen(response), 0);
+        }
+    }
 };
 
-
-
 int main() {
-    int port = 12345;
+    int port = 12346;
     TCPServer server(port);
 
     server.startListening();
