@@ -51,14 +51,11 @@ public:
         std::cout << "Accepted connection from " << inet_ntoa(clientAddr.sin_addr) << ":" << ntohs(clientAddr.sin_port) <<
                   std::endl;
 
-        while (true) {
+        while(true) {
             handleClientRequest(clientSocket);
         }
         close(clientSocket);
     }
-
-    
-
 
 private:
     int serverSocket;
@@ -80,11 +77,29 @@ private:
                 sendFileContent(clientSocket, filename);
             } else if (command.find("LIST") == 0) {
                 sendFileList(clientSocket);
-            } else {
+            } else if (command.find("PUT") == 0){
+                std::string filename = command.substr(4);
+                receiveFile(clientSocket, filename);
+            }
+            else {
                 const char* response = "Unknown command";
                 send(clientSocket, response, strlen(response), 0);
             }
         }
+    }
+
+    void receiveFile(int clientSocket, const std::string& filename){
+        std::ofstream outputFile(filename);
+
+        if (!outputFile.is_open()){
+            const char* response = "Error creating file on server";
+            send(clientSocket,response, strlen(response), 0);
+            return;
+        }
+
+        outputFile.close();
+        const char* response = "File received successfully";
+        send(clientSocket, response, strlen(response), 0);
     }
 
     void sendFileContent(int clientSocket, const std::string& filename) {
@@ -124,7 +139,6 @@ private:
 int main() {
     int port = 12346;
     TCPServer server(port);
-
 
     server.startListening();
 
